@@ -5,6 +5,11 @@ generate_password() {
   openssl rand -base64 12
 }
 
+# Function to replace dots with dashes in a string
+replace_dots_with_dashes() {
+  echo "$1" | tr '.' '-'
+}
+
 # Check for root access
 if [ "$(id -u)" -ne 0 ]; then
   echo "Please run this script as root or using sudo."
@@ -13,6 +18,10 @@ fi
 
 # Get user input for domain
 read -p "Enter your domain (without http:// or https://): " domain
+
+# Replace dots with dashes for the database name and username
+db_name=$(replace_dots_with_dashes "$domain")
+db_user=$(replace_dots_with_dashes "$domain")
 
 # Update the system
 apt update && apt upgrade -y
@@ -35,9 +44,9 @@ apt install -y apache2 mariadb-client mariadb-server
 
 # Setting up a Database
 db_password="$(generate_password)"
-mysql -u root -e "create database $domain;"
-mysql -u root -e "create user '$domain'@'localhost' identified by '$db_password';"
-mysql -u root -e "grant all privileges on $domain.* to '$domain'@'localhost';"
+mysql -u root -e "create database $db_name;"
+mysql -u root -e "create user '$db_user'@'localhost' identified by '$db_password';"
+mysql -u root -e "grant all privileges on $db_name.* to '$db_user'@'localhost';"
 mysql -u root -e "flush privileges;"
 
 # Display the MariaDB root password
@@ -93,12 +102,12 @@ wp_config="/var/www/html/wp-config.php"
 cp /var/www/html/wp-config-sample.php $wp_config
 
 # Update database connection details in wp-config.php
-sed -i -e "s/database_name_here/$domain/" $wp_config
-sed -i -e "s/username_here/$domain/" $wp_config
+sed -i -e "s/database_name_here/$db_name/" $wp_config
+sed -i -e "s/username_here/$db_user/" $wp_config
 generated_password="$(generate_password)"
 sed -i -e "s/password_here/$generated_password/" $wp_config
 sed -i -e "s/localhost/localhost/" $wp_config
-sed -i -e "s/wp_/$domain\_/" $wp_config
+sed -i -e "s/wp_/$db_name\_/" $wp_config
 
 # Add a cronjob to ping WordPress wp-cron.php each minute
 (crontab -l ; echo "*/1 * * * * curl -s http://$domain/wp-cron.php >/dev/null 2>&1") | crontab -
@@ -110,9 +119,6 @@ ufw --force enable
 # Display WordPress login details
 echo "WordPress has been configured."
 echo "You can log in at: http://$domain/wp-login.php"
-echo "Username: $domain"
+echo "Username: $db_user"
 echo "Password: $generated_password"
-echo "Note: It is recommended to change the password after logging in."
-echo "Database Name: $domain"
-echo "Database User: $domain"
-echo "Database Password: $db_password"
+echo "Note: It is recommended to change the password after
