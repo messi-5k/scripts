@@ -20,18 +20,8 @@ apt update && apt upgrade -y
 # Install necessary packages
 apt install -y sudo nano lsb-release ca-certificates apt-transport-https software-properties-common gnupg2 wget unzip curl apache2 mariadb-client mariadb-server
 
-# Add the ondrej/php repository for the latest PHP version
-add-apt-repository -y ppa:ondrej/php
-apt update
-
-# Install the latest PHP version
-php_version=$(apt search ^php | grep -Eo 'php[0-9]+\.[0-9]+' | sort -V | tail -n 1)
-apt install -y "$php_version"
-
-# Install WordPress CLI
-wget https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar
-chmod +x wp-cli.phar
-mv wp-cli.phar /usr/local/bin/wp
+# Determine the installed PHP version
+php_version=$(php -v | grep -Eo 'PHP [0-9]+\.[0-9]+' | cut -d ' ' -f2)
 
 # Adjust php.ini
 ini_file="/etc/php/$php_version/apache2/php.ini"
@@ -44,14 +34,14 @@ sed -i -e 's/;date.timezone =.*/date.timezone = America\/Chicago/' "$ini_file"
 apt install -y apache2 mariadb-client mariadb-server
 
 # Setting up a Database
-mysql -u root -p
-# Enter root password
-create database $domain;
-create user 'admin'@'localhost' identified by "$(generate_password)";
-# Set a secure password for admin user
-grant all privileges on $domain.* to 'admin'@'localhost';
-flush privileges;
-exit
+db_password="$(generate_password)"
+mysql -u root -e "create database $domain;"
+mysql -u root -e "create user 'admin'@'localhost' identified by '$db_password';"
+mysql -u root -e "grant all privileges on $domain.* to 'admin'@'localhost';"
+mysql -u root -e "flush privileges;"
+
+# Display the MariaDB root password
+echo "MariaDB root password: $db_password"
 
 # Delete the Placeholder Website
 cd /var/www/html && rm index.html
@@ -106,6 +96,3 @@ echo "You can log in at: http://$domain/wp-login.php"
 echo "Username: admin"
 echo "Password: $generated_password"
 echo "Note: It is recommended to change the password after logging in."
-
-# Display wp-cli installation message
-echo "WordPress CLI (wp-cli) has been installed. You can use 'wp' command for WordPress management."
