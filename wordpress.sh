@@ -58,10 +58,27 @@ find /var/www/html -type d -exec chmod 755 {} \;
 find /var/www/html -type f -exec chmod 644 {} \;
 
 # Setting up a Reverse-Proxy
-nano /etc/apache2/sites-available/wordpress.conf
+cat > /etc/apache2/sites-available/wordpress.conf <<EOF
+<VirtualHost *:80>
+    ServerAdmin webmaster@localhost
+    DocumentRoot /var/www/html/
+    ServerName $domain
 
-# Paste the VirtualHost configuration and replace <YourEmail>, <Your(Sub)Domain>, and add the domain for Certbot
-sed -i -e "s/<Your(Sub)Domain>/$domain/" /etc/apache2/sites-available/wordpress.conf
+    <Directory /var/www/html/>
+        Options +FollowSymlinks
+        AllowOverride All
+        Require all granted
+        <IfModule mod_dav.c>
+            Dav off
+        </IfModule>
+        SetEnv HOME /var/www/html
+        SetEnv HTTP_HOME /var/www/html
+    </Directory>
+
+    ErrorLog \${APACHE_LOG_DIR}/error.log
+    CustomLog \${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+EOF
 
 # Activate the config and restart Apache
 a2ensite wordpress.conf
