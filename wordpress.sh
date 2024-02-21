@@ -57,9 +57,8 @@ rm -f /var/www/html/index.html
 
 # Download WordPress Files
 cd /home && wget https://wordpress.org/latest.zip
-unzip latest.zip
+unzip -o latest.zip -d /var/www/html
 rm latest.zip
-cp -R /home/wordpress/* /var/www/html
 
 # Adjust Folder Permissions
 chown -R www-data:www-data /var/www/html
@@ -95,7 +94,7 @@ systemctl restart apache2
 
 # Installing an SSL Certificate via Certbot
 apt install -y certbot python3-certbot-apache
-certbot --apache -d $domain
+certbot --apache -d $domain --non-interactive --agree-tos --email webmaster@$domain
 
 # Configure WordPress
 wp_config="/var/www/html/wp-config.php"
@@ -121,4 +120,7 @@ echo "WordPress has been configured."
 echo "You can log in at: http://$domain/wp-login.php"
 echo "Username: $db_user"
 echo "Password: $generated_password"
-echo "Note: It is recommended to change the password after
+echo "Note: It is recommended to change the password after logging in."
+echo "Database Name: $db_name"
+echo "Database User: $db_user"
+echo "Database Password: $db_password"
